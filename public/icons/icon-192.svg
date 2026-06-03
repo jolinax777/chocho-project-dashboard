@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" role="img" aria-label="潮巢 Dashboard">
+  <rect width="192" height="192" rx="32" fill="#12315f"/>
+  <circle cx="142" cy="42" r="28" fill="#f8d55f"/>
+  <path d="M34 112c18-34 43-51 76-51 19 0 34 6 47 18-12-5-25-5-38 0-20 8-32 25-35 52-15-27-36-38-63-31 4-4 8-6 13-8z" fill="#fff7e6"/>
+  <path d="M44 134h104v18H44z" fill="#ee5846"/>
+  <path d="M63 101h20v20H63zm33-15h20v35H96zm33 4h20v31h-20z" fill="#58a86b"/>
+</svg>
