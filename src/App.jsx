@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Chart from 'chart.js/auto';
 import { fetchAllData } from './api';
 
 const tabs = [
-  { id: 'dashboard', label: '總覽', icon: '⌂' },
-  { id: 'tasks', label: '任務', icon: '▦' },
-  { id: 'categories', label: '分類', icon: '◒' },
-  { id: 'reports', label: '日報', icon: '☰' },
-  { id: 'blockers', label: '卡關', icon: '!' },
-  { id: 'ideas', label: '想法', icon: '✦' }
+  { id: 'dashboard', label: '總覽', icon: 'ti ti-layout-dashboard' },
+  { id: 'tasks', label: '任務', icon: 'ti ti-list-check' },
+  { id: 'categories', label: '分類', icon: 'ti ti-chart-dots-3' },
+  { id: 'reports', label: '日報', icon: 'ti ti-notebook' },
+  { id: 'blockers', label: '卡關', icon: 'ti ti-alert-triangle' },
+  { id: 'ideas', label: '想法', icon: 'ti ti-bulb' }
 ];
 
 const statusGroups = [
@@ -29,6 +30,14 @@ const metricLabels = {
   notReportedTodayCount: '今日尚未回報',
   todayCompletedCount: '今日完成任務',
   todayIdeaCount: '今日新增想法'
+};
+
+const statusColors = {
+  todo: '#8a8680',
+  doing: '#e8b84b',
+  blocked: '#e05c4a',
+  done: '#7ab38a',
+  idea: '#9b6dff'
 };
 
 function arrayFrom(value) {
@@ -169,71 +178,118 @@ function App() {
 
   const progress = dashboard.totalTasks ? (dashboard.completedTasks / dashboard.totalTasks) * 100 : 0;
   const currentTab = tabs.find((tab) => tab.id === activeTab);
+  const displayTime = lastLoadedAt || dashboard.generatedAt || '尚未同步';
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">潮巢 Nestory</p>
-          <h1>Project Dashboard</h1>
-        </div>
-        <button className="refresh-button" type="button" onClick={loadData} disabled={loading}>
-          <span aria-hidden="true">↻</span>
-          {loading ? '讀取中' : '重新整理'}
-        </button>
-      </header>
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        blockerCount={blockers.length}
+        lastLoadedAt={displayTime}
+      />
 
-      <main className="content">
-        <section className="hero-panel">
+      <div className="workspace">
+        <header className="topbar">
           <div>
-            <p className="eyebrow">Project Bot 只讀儀表板</p>
-            <h2>{currentTab?.label}</h2>
+            <p className="date-line">{new Date().toLocaleDateString('zh-TW', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+            <h1>{currentTab?.label}</h1>
           </div>
-          <div className="update-pill">最後更新：{lastLoadedAt || dashboard.generatedAt || '尚未讀取'}</div>
-        </section>
+          <button className="refresh-button" type="button" onClick={loadData} disabled={loading}>
+            <i className="ti ti-refresh" aria-hidden="true" />
+            {loading ? '同步中' : '重新整理'}
+          </button>
+        </header>
 
-        {errors.length > 0 && (
-          <div className="error-banner">
-            <strong>部分 API 讀取失敗</strong>
-            <span>{errors.join(' / ')}</span>
-          </div>
-        )}
+        <main className="content">
+          {errors.length > 0 && (
+            <div className="error-banner">
+              <strong>部分 API 讀取失敗</strong>
+              <span>{errors.join(' / ')}</span>
+            </div>
+          )}
 
-        {loading ? (
-          <LoadingView />
-        ) : (
-          <>
-            {activeTab === 'dashboard' && <DashboardView data={dashboard} progress={progress} />}
-            {activeTab === 'tasks' && (
-              <TasksView
-                tasks={filteredTasks}
-                filters={filters}
-                setFilters={setFilters}
-                categoryOptions={categoryOptions}
-              />
-            )}
-            {activeTab === 'categories' && <CategoriesView categories={categories} tasks={tasks} />}
-            {activeTab === 'reports' && <ReportsView reports={reports} members={members} />}
-            {activeTab === 'blockers' && <BlockersView blockers={blockers} />}
-            {activeTab === 'ideas' && <IdeasView ideas={ideas} />}
-          </>
-        )}
-      </main>
+          {loading ? (
+            <LoadingView />
+          ) : (
+            <>
+              {activeTab === 'dashboard' && (
+                <DashboardView data={dashboard} progress={progress} categories={categories} tasks={tasks} />
+              )}
+              {activeTab === 'tasks' && (
+                <TasksView
+                  tasks={filteredTasks}
+                  filters={filters}
+                  setFilters={setFilters}
+                  categoryOptions={categoryOptions}
+                />
+              )}
+              {activeTab === 'categories' && <CategoriesView categories={categories} tasks={tasks} />}
+              {activeTab === 'reports' && <ReportsView reports={reports} members={members} />}
+              {activeTab === 'blockers' && <BlockersView blockers={blockers} />}
+              {activeTab === 'ideas' && <IdeasView ideas={ideas} />}
+            </>
+          )}
+        </main>
+      </div>
 
-      <nav className="bottom-nav" aria-label="主導覽">
+      <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} blockerCount={blockers.length} />
+    </div>
+  );
+}
+
+function Sidebar({ activeTab, setActiveTab, blockerCount, lastLoadedAt }) {
+  return (
+    <aside className="sidebar">
+      <div className="brand-block">
+        <div className="brand-mark">潮</div>
+        <div>
+          <p className="brand-name">潮巢 <span>NESTORY</span></p>
+          <p className="brand-subtitle">Project Bot · 只讀模式</p>
+        </div>
+      </div>
+
+      <nav className="side-nav" aria-label="主導覽">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
-            className={activeTab === tab.id ? 'active' : ''}
+            className={`${activeTab === tab.id ? 'active' : ''} ${tab.id === 'blockers' ? 'danger' : ''}`}
             onClick={() => setActiveTab(tab.id)}
           >
-            <span aria-hidden="true">{tab.icon}</span>
-            {tab.label}
+            <i className={tab.icon} aria-hidden="true" />
+            <span>{tab.label}</span>
+            {tab.id === 'blockers' && blockerCount > 0 && <b>{blockerCount}</b>}
           </button>
         ))}
       </nav>
-    </div>
+
+      <div className="sync-note">
+        <span>最後同步</span>
+        <strong>{lastLoadedAt}</strong>
+      </div>
+    </aside>
+  );
+}
+
+function MobileNav({ activeTab, setActiveTab, blockerCount }) {
+  return (
+    <nav className="mobile-nav" aria-label="手機主導覽">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          className={activeTab === tab.id ? 'active' : ''}
+          onClick={() => setActiveTab(tab.id)}
+        >
+          <span>
+            <i className={tab.icon} aria-hidden="true" />
+            {tab.id === 'blockers' && blockerCount > 0 && <b>{blockerCount}</b>}
+          </span>
+          {tab.label}
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -247,27 +303,189 @@ function LoadingView() {
   );
 }
 
-function DashboardView({ data, progress }) {
-  const metrics = Object.entries(metricLabels).map(([key, label]) => ({ key, label, value: data[key] ?? 0 }));
+function DashboardView({ data, progress, categories, tasks }) {
+  const statusCounts = {
+    todo: data.todoCount,
+    doing: data.doingCount,
+    blocked: data.blockerCount,
+    done: data.completedTasks
+  };
+  const categoryList = categories.length > 0 ? categories : buildCategoriesFromTasks(tasks);
+
   return (
-    <section className="page-stack">
-      <div className="overview-card">
-        <div>
-          <p className="eyebrow">整體完成率</p>
-          <h3>{data.completedTasks} / {data.totalTasks} 任務完成</h3>
+    <section className="page-stack dashboard-page">
+      <div className="dashboard-cards">
+        <article className="vinyl-card">
+          <div className="vinyl-content">
+            <p className="section-kicker">Total Progress</p>
+            <strong>{Math.round(progress)}%</strong>
+            <span>{data.completedTasks} / {data.totalTasks} tasks completed</span>
+          </div>
+          <div className="vinyl-disc" aria-hidden="true" />
+          <div className="vinyl-progress">
+            <span style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
+          </div>
+        </article>
+
+        <div className="stat-mini-grid">
+          <MiniStat label="待辦" value={data.todoCount} tone="todo" />
+          <MiniStat label="進行中" value={data.doingCount} tone="doing" />
+          <MiniStat label="卡關" value={data.blockerCount} tone="blocked" />
+          <MiniStat label="已完成" value={data.completedTasks} tone="done" />
         </div>
-        <ProgressBar value={progress} label="總進度" />
+
+        <article className="today-card">
+          <p className="section-kicker">Today</p>
+          <TodayLine label="今日完成任務" value={data.todayCompletedCount} />
+          <TodayLine label="已回報成員" value={data.reportedTodayCount} />
+          <TodayLine label="尚未回報" value={data.notReportedTodayCount} />
+          <TodayLine label="新增想法" value={data.todayIdeaCount} />
+        </article>
       </div>
-      <div className="metric-grid">
-        {metrics.map((metric) => (
-          <article className="metric-card" key={metric.key}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-          </article>
-        ))}
+
+      <div className="chart-grid">
+        <StatusDoughnutChart counts={statusCounts} />
+        <CategoryBarChart categories={categoryList} />
       </div>
+
       <p className="inline-note">API 最後產生時間：{data.generatedAt || '尚未提供'}</p>
     </section>
+  );
+}
+
+function MiniStat({ label, value, tone }) {
+  return (
+    <article className={`mini-stat mini-stat-${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function TodayLine({ label, value }) {
+  return (
+    <p className="today-line">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </p>
+  );
+}
+
+function StatusDoughnutChart({ counts }) {
+  const canvasRef = useRef(null);
+  const labels = ['待辦', '進行中', '卡關', '已完成'];
+  const values = [counts.todo, counts.doing, counts.blocked, counts.done];
+  const colors = ['#8a8680', '#e8b84b', '#e05c4a', '#7ab38a'];
+
+  useEffect(() => {
+    if (!canvasRef.current) return undefined;
+    const chart = new Chart(canvasRef.current, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }]
+      },
+      options: {
+        cutout: '68%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#141416',
+            titleColor: '#f5e6c8',
+            bodyColor: '#f0ece4',
+            borderColor: '#2a2a2e',
+            borderWidth: 1
+          }
+        }
+      }
+    });
+    return () => chart.destroy();
+  }, [counts.todo, counts.doing, counts.blocked, counts.done]);
+
+  return (
+    <article className="chart-card">
+      <div className="chart-head">
+        <div>
+          <p className="section-kicker">Status Mix</p>
+          <h3>任務狀態分佈</h3>
+        </div>
+      </div>
+      <div className="chart-body">
+        <canvas ref={canvasRef} />
+      </div>
+      <div className="chart-legend">
+        {labels.map((label, index) => (
+          <span key={label}>
+            <i style={{ background: colors[index] }} />
+            {label} {values[index] || 0}
+          </span>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function CategoryBarChart({ categories }) {
+  const canvasRef = useRef(null);
+  const palette = ['#9b6dff', '#e8b84b', '#7ab38a', '#e05c4a', '#d4853a'];
+  const labels = categories.slice(0, 8).map((category) => pick(category, ['name', 'category', '分類'], '未分類'));
+  const values = categories.slice(0, 8).map((category) => {
+    const total = numberPick(category, ['totalTasks', 'total', '總任務數'], 0);
+    const done = numberPick(category, ['completedTasks', 'doneCount', '已完成數'], 0);
+    return numberPick(category, ['completionRate', '完成率'], total ? (done / total) * 100 : 0);
+  });
+
+  useEffect(() => {
+    if (!canvasRef.current) return undefined;
+    const chart = new Chart(canvasRef.current, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            data: values,
+            backgroundColor: labels.map((_, index) => palette[index % palette.length]),
+            borderRadius: 5
+          }
+        ]
+      },
+      options: {
+        scales: {
+          x: {
+            ticks: { color: '#8a8680' },
+            grid: { display: false }
+          },
+          y: {
+            min: 0,
+            max: 100,
+            ticks: { color: '#8a8680', callback: (value) => `${value}%` },
+            grid: { color: 'rgba(245, 230, 200, .08)' }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#141416',
+            titleColor: '#f5e6c8',
+            bodyColor: '#f0ece4',
+            callbacks: { label: (context) => `${context.parsed.y}%` }
+          }
+        }
+      }
+    });
+    return () => chart.destroy();
+  }, [labels.join('|'), values.join('|')]);
+
+  return (
+    <article className="chart-card">
+      <div className="chart-head">
+        <div>
+          <p className="section-kicker">Category Rate</p>
+          <h3>分類完成率</h3>
+        </div>
+      </div>
+      {categories.length === 0 ? <EmptyState text="目前沒有分類圖表資料。" /> : <div className="chart-body"><canvas ref={canvasRef} /></div>}
+    </article>
   );
 }
 
@@ -301,7 +519,7 @@ function TasksView({ tasks, filters, setFilters, categoryOptions }) {
           {statusGroups.map((group) => {
             const groupTasks = tasks.filter((task) => getGroupKey(task) === group.key);
             return (
-              <section className="task-column" key={group.key}>
+              <section className={`task-column column-${group.key}`} key={group.key}>
                 <div className="column-title">
                   <h3>{group.title}</h3>
                   <span>{groupTasks.length}</span>
@@ -321,11 +539,12 @@ function TasksView({ tasks, filters, setFilters, categoryOptions }) {
 }
 
 function TaskCard({ task }) {
+  const groupKey = getGroupKey(task);
   return (
-    <article className="task-card">
+    <article className={`task-card task-card-${groupKey}`}>
       <div className="task-card-head">
         <h4>{pick(task, ['title', 'name', 'taskName', '任務名稱', '想法內容'], '未命名任務')}</h4>
-        <span className={`status-badge status-${getGroupKey(task)}`}>{getTaskStatus(task)}</span>
+        <span className={`status-badge status-${groupKey}`}>{getTaskStatus(task)}</span>
       </div>
       <dl>
         <div><dt>分類</dt><dd>{pick(task, ['category', '分類'], '未分類')}</dd></div>
@@ -430,6 +649,8 @@ function BlockersView({ blockers }) {
       items={blockers}
       empty="目前沒有卡關項目。"
       titleKeys={['title', 'name', 'taskName', '任務名稱']}
+      tone="blocker"
+      tag="卡關"
       lines={[
         ['分類', ['category', '分類']],
         ['提出者', ['reporter', 'owner', '提出者', '負責人']],
@@ -446,6 +667,8 @@ function IdeasView({ ideas }) {
       items={ideas}
       empty="目前沒有想法項目。"
       titleKeys={['content', 'idea', 'title', '想法內容']}
+      tone="idea"
+      tag="想法"
       lines={[
         ['分類', ['category', '分類']],
         ['提出者', ['reporter', 'owner', '提出者']],
@@ -455,15 +678,19 @@ function IdeasView({ ideas }) {
   );
 }
 
-function ListView({ items, empty, titleKeys, lines }) {
+function ListView({ items, empty, titleKeys, lines, tone = 'default', tag = '項目' }) {
   return (
     <section className="list-grid">
       {items.length === 0 ? (
         <EmptyState text={empty} />
       ) : (
         items.map((item, index) => (
-          <article className="list-card" key={index}>
-            <h3>{pick(item, titleKeys, '未命名項目')}</h3>
+          <article className={`list-card list-card-${tone}`} key={index}>
+            <span className="list-dot" aria-hidden="true" />
+            <div className="list-card-title">
+              <h3>{pick(item, titleKeys, '未命名項目')}</h3>
+              <span>{tag}</span>
+            </div>
             {lines.map(([label, keys]) => <InfoLine label={label} value={pick(item, keys, '未填')} key={label} />)}
           </article>
         ))
