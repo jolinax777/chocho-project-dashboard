@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chocho-project-dashboard-v1';
+const CACHE_NAME = 'chocho-project-dashboard-v2';
 const APP_SHELL = [
   './',
   './manifest.json'
@@ -26,6 +26,19 @@ self.addEventListener('fetch', (event) => {
 
   if (requestUrl.origin.includes('script.google.com')) {
     event.respondWith(fetch(event.request));
+    return;
+  }
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./')))
+    );
     return;
   }
 
