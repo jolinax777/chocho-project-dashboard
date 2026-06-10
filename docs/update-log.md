@@ -16,10 +16,11 @@
   - `getDashboardData`, `buildCategoriesFromTasks`, `getTaskStatus`, and `getGroupKey` were moved without logic changes.
 - Testing / GitHub Actions status:
   - Local `npm run build` was not available because the current environment has no usable `npm` command.
-  - GitHub Actions will be used as the build verification after the PR is opened.
+  - GitHub Actions run `27273932291` completed successfully, including `npm ci` and `npm run build`.
+  - A follow-up documentation-only commit may trigger a final PR build; check the latest PR status before merge.
 - Frontend / deployment impact:
   - No intended UI, API, deployment, or data format changes.
-  - Main risk is import/export wiring after moving code; this should be covered by the PR build.
+  - Main risk is import/export wiring after moving code; the PR build passed for the refactor commit.
 
 ## 2026-06-10 - Improve build and loading stability
 
