@@ -262,7 +262,7 @@ h2,
 }
 
 .today-card {
-  display: none;
+  display: block;
   padding: 18px;
 }
 

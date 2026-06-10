@@ -1,5 +1,24 @@
 # Update Log
 
+## 2026-06-10 - Show mobile dashboard today summary
+
+- Branch: `fix/show-mobile-today-summary`
+- Modified files:
+  - `src/styles.css`
+  - `docs/update-log.md`
+- Reason:
+  - Show the Dashboard today summary card on mobile so daily progress details are visible from the phone homepage.
+  - Keep the change scoped to CSS without changing JSX structure, API behavior, data mapping, Chart.js logic, or deployment workflow.
+- Build and dependency notes:
+  - No package, lockfile, API config, or workflow changes.
+  - Desktop Dashboard layout remains governed by the existing `@media (min-width: 720px)` rules.
+- Testing / GitHub Actions status:
+  - Local `npm run build` was not available because the current environment has no usable `npm` command.
+  - GitHub Actions will be used as the build verification after the PR is opened.
+- Frontend / deployment impact:
+  - Mobile Dashboard now displays today summary details.
+  - No intended API, data format, or deployment changes.
+
 ## 2026-06-10 - Extract constants and data utilities
 
 - Branch: `refactor/extract-constants-data-utils`
