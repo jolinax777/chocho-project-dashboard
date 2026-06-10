@@ -39,15 +39,10 @@ jobs:
           const fs = require('fs');
           const path = 'src/App.jsx';
           const source = fs.readFileSync(path, 'utf8');
-          const before = `  const loadData = async () => {
-            setLoading(true);
-            const { result, errors: apiErrors } = await fetchAllData();
-            setPayloads(result);
-            setErrors(apiErrors);
-            setLastLoadedAt(new Date().toLocaleString('zh-TW', { hour12: false }));
-            setLoading(false);
-          };`.replace(/^ {10}/gm, '');
-          const after = `  const loadData = async () => {
+          if (source.includes('} catch (error) {') && source.includes('} finally {')) {
+            process.exit(0);
+          }
+          const replacement = `  const loadData = async () => {
             setLoading(true);
             try {
               const { result, errors: apiErrors } = await fetchAllData();
@@ -59,13 +54,14 @@ jobs:
             } finally {
               setLoading(false);
             }
-          };`.replace(/^ {10}/gm, '');
-          if (!source.includes(before) && !source.includes(after)) {
+          };
+
+          useEffect(() => {`.replace(/^ {10}/gm, '');
+          const next = source.replace(/  const loadData = async \(\) => \{[\s\S]*?\n  useEffect\(\(\) => \{/, replacement);
+          if (next === source) {
             throw new Error('loadData block not found');
           }
-          if (source.includes(before)) {
-            fs.writeFileSync(path, source.replace(before, after));
-          }
+          fs.writeFileSync(path, next);
           NODE
 
       - name: Commit generated stability files
