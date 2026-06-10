@@ -1,5 +1,26 @@
 # Update Log
 
+## 2026-06-10 - Extract constants and data utilities
+
+- Branch: `refactor/extract-constants-data-utils`
+- Modified files:
+  - `src/App.jsx`
+  - `src/constants.js`
+  - `src/dataUtils.js`
+  - `docs/update-log.md`
+- Reason:
+  - Reduce `src/App.jsx` complexity by moving UI-independent constants and data helper functions into focused modules.
+  - Keep UI components, JSX structure, CSS classes, API behavior, and data mapping results unchanged.
+- Build and dependency notes:
+  - No package, lockfile, API config, CSS, or workflow changes.
+  - `getDashboardData`, `buildCategoriesFromTasks`, `getTaskStatus`, and `getGroupKey` were moved without logic changes.
+- Testing / GitHub Actions status:
+  - Local `npm run build` was not available because the current environment has no usable `npm` command.
+  - GitHub Actions will be used as the build verification after the PR is opened.
+- Frontend / deployment impact:
+  - No intended UI, API, deployment, or data format changes.
+  - Main risk is import/export wiring after moving code; this should be covered by the PR build.
+
 ## 2026-06-10 - Improve build and loading stability
 
 - Branch: `fix/improve-build-and-loading-stability`
