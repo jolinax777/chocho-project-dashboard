@@ -1,5 +1,25 @@
 # Update Log
 
+## 2026-06-10 - Add dashboard blocker preview
+
+- Branch: `feat/dashboard-blocker-preview`
+- Modified files:
+  - `src/App.jsx`
+  - `src/styles.css`
+  - `docs/update-log.md`
+- Reason:
+  - Show a compact Dashboard preview of current blocker items so daily blockers are visible without opening the Blockers page.
+  - Keep the preview limited to existing blockers API data and at most 3 items.
+- Build and dependency notes:
+  - No package, lockfile, API config, data structure, Chart.js, or workflow changes.
+  - No tasks fallback was added for this preview.
+- Testing / GitHub Actions status:
+  - Local `npm run build` was not available because the current environment has no usable `npm` command.
+  - GitHub Actions will be used as the build verification after the PR is opened.
+- Frontend / deployment impact:
+  - Dashboard now shows a compact blocker preview between summary cards and charts.
+  - No intended API, data format, or deployment changes.
+
 ## 2026-06-10 - Show mobile dashboard today summary
 
 - Branch: `fix/show-mobile-today-summary`
