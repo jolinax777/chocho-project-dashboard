@@ -134,15 +134,20 @@ function App() {
   const [filters, setFilters] = useState({ status: 'all', category: 'all', query: '' });
 
   const loadData = async () => {
-    setLoading(true);
+  setLoading(true);
+  try {
     const { result, errors: apiErrors } = await fetchAllData();
     setPayloads(result);
     setErrors(apiErrors);
     setLastLoadedAt(new Date().toLocaleString('zh-TW', { hour12: false }));
+  } catch (error) {
+    setErrors([error?.message || '資料載入失敗']);
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
-  useEffect(() => {
+useEffect(() => {
     loadData();
   }, []);
 
