@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -24,57 +24,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Patch loading guard
-        if: github.event_name == 'pull_request'
-        run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const path = 'src/App.jsx';
-          const source = fs.readFileSync(path, 'utf8');
-          if (source.includes('} catch (error) {') && source.includes('} finally {')) {
-            process.exit(0);
-          }
-          const replacement = `  const loadData = async () => {
-            setLoading(true);
-            try {
-              const { result, errors: apiErrors } = await fetchAllData();
-              setPayloads(result);
-              setErrors(apiErrors);
-              setLastLoadedAt(new Date().toLocaleString('zh-TW', { hour12: false }));
-            } catch (error) {
-              setErrors([error?.message || '資料載入失敗']);
-            } finally {
-              setLoading(false);
-            }
-          };
-
-          useEffect(() => {`.replace(/^ {10}/gm, '');
-          const next = source.replace(/  const loadData = async \(\) => \{[\s\S]*?\n  useEffect\(\(\) => \{/, replacement);
-          if (next === source) {
-            throw new Error('loadData block not found');
-          }
-          fs.writeFileSync(path, next);
-          NODE
-
-      - name: Commit generated stability files
-        if: github.event_name == 'pull_request'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json src/App.jsx
-          git commit -m "fix: improve loading and lockfile stability" || exit 0
-          git push
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build
         run: npm run build
