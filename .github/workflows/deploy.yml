@@ -32,16 +32,49 @@ jobs:
         with:
           node-version: 20
 
-      - name: Generate package lock
-        run: npm install --package-lock-only
+      - name: Patch loading guard
+        if: github.event_name == 'pull_request'
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'src/App.jsx';
+          const source = fs.readFileSync(path, 'utf8');
+          const before = `  const loadData = async () => {
+            setLoading(true);
+            const { result, errors: apiErrors } = await fetchAllData();
+            setPayloads(result);
+            setErrors(apiErrors);
+            setLastLoadedAt(new Date().toLocaleString('zh-TW', { hour12: false }));
+            setLoading(false);
+          };`.replace(/^ {10}/gm, '');
+          const after = `  const loadData = async () => {
+            setLoading(true);
+            try {
+              const { result, errors: apiErrors } = await fetchAllData();
+              setPayloads(result);
+              setErrors(apiErrors);
+              setLastLoadedAt(new Date().toLocaleString('zh-TW', { hour12: false }));
+            } catch (error) {
+              setErrors([error?.message || '資料載入失敗']);
+            } finally {
+              setLoading(false);
+            }
+          };`.replace(/^ {10}/gm, '');
+          if (!source.includes(before) && !source.includes(after)) {
+            throw new Error('loadData block not found');
+          }
+          if (source.includes(before)) {
+            fs.writeFileSync(path, source.replace(before, after));
+          }
+          NODE
 
-      - name: Commit package lock
+      - name: Commit generated stability files
         if: github.event_name == 'pull_request'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "chore: add package lock" || exit 0
+          git add package-lock.json src/App.jsx
+          git commit -m "fix: improve loading and lockfile stability" || exit 0
           git push
 
       - name: Install dependencies
