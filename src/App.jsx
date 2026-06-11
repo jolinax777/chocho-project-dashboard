@@ -127,7 +127,7 @@ useEffect(() => {
           ) : (
             <>
               {activeTab === 'dashboard' && (
-                <DashboardView data={dashboard} progress={progress} categories={categories} tasks={tasks} />
+                <DashboardView data={dashboard} progress={progress} categories={categories} tasks={tasks} blockers={blockers} />
               )}
               {activeTab === 'tasks' && (
                 <TasksView
@@ -216,7 +216,7 @@ function LoadingView() {
   );
 }
 
-function DashboardView({ data, progress, categories, tasks }) {
+function DashboardView({ data, progress, categories, tasks, blockers }) {
   const statusCounts = {
     todo: data.todoCount,
     doing: data.doingCount,
@@ -256,12 +256,46 @@ function DashboardView({ data, progress, categories, tasks }) {
         </article>
       </div>
 
+      <BlockerPreview blockers={blockers} />
+
       <div className="chart-grid">
         <StatusDoughnutChart counts={statusCounts} />
         <CategoryBarChart categories={categoryList} />
       </div>
 
       <p className="inline-note">API 最後產生時間：{data.generatedAt || '尚未提供'}</p>
+    </section>
+  );
+}
+
+function BlockerPreview({ blockers }) {
+  const previewItems = blockers.slice(0, 3);
+
+  return (
+    <section className="blocker-preview" aria-label="卡關預覽">
+      <div className="blocker-preview-head">
+        <div>
+          <p className="section-kicker">Blockers</p>
+          <h3>卡關預覽</h3>
+        </div>
+        {blockers.length > 0 && <span>{blockers.length} 件卡關</span>}
+      </div>
+      {previewItems.length === 0 ? (
+        <EmptyState text="目前沒有卡關事項。" />
+      ) : (
+        <div className="blocker-preview-list">
+          {previewItems.map((blocker, index) => (
+            <article className="blocker-preview-card" key={`${pick(blocker, ['id', 'title', 'name', 'taskName', '任務名稱'], 'blocker')}-${index}`}>
+              <h4>{pick(blocker, ['title', 'name', 'taskName', '任務名稱'], '未命名卡關')}</h4>
+              <div className="blocker-preview-meta">
+                <span>{pick(blocker, ['category', '分類'], '未分類')}</span>
+                <span>{pick(blocker, ['reporter', 'owner', '提出者', '負責人'], '未指定')}</span>
+                <span>{formatDate(pick(blocker, ['createdAt', 'createdDate', '建立日期']))}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
